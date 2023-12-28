@@ -1,0 +1,127 @@
+#!/bin/bash
+
+VERSION="v0.1.0"
+
+function show_help() {
+    echo "Usage: internsctl [options]"
+    echo "Options:"
+    echo "  --help               Show help information"
+    echo "  --version            Show command version"
+    echo "  cpu getinfo          Get CPU information"
+    echo "  memory getinfo       Get memory information"
+    echo "  user create <username> Create a new user"
+    echo "  user list            List all regular users"
+    echo "  user list --sudo-only List all users with sudo permissions"
+    echo "  file getinfo <file-name> Get information about a file"
+    # Add more options and usage information as needed
+}
+
+function show_version() {
+    echo "internsctl $VERSION"
+}
+
+function get_cpu_info() {
+    echo "CPU Information:"
+    lscpu
+}
+
+function get_memory_info() {
+    echo "Memory Information:"
+    free -h
+}
+
+function create_user() {
+    if [ -z "$2" ]; then
+        echo "Usage: internsctl user create <username>"
+        exit 1
+    fi
+    sudo useradd -m "$2"
+    sudo passwd "$2"
+    echo "User '$2' created successfully."
+}
+
+function list_users() {
+    if [ "$2" == "--sudo-only" ]; then
+        echo "Users with sudo permissions:"
+        grep -Po '^sudo.+:\K.*$' /etc/group | tr ',' '\n'
+    else
+        echo "Regular users:"
+        getent passwd | grep -vE "/s?bin/(nologin|false)" | cut -d: -f1
+    fi
+}
+
+function get_file_info() {
+    if [ -z "$2" ]; then
+        echo "Usage: internsctl file getinfo <file-name>"
+        exit 1
+    fi
+    echo "File Information for '$2':"
+    stat -c "File: %n%nAccess: %a%nSize(B): %s%nOwner: %U" "$2"
+}
+
+# Parse command line options
+case "$1" in
+    --help)
+        show_help
+        ;;
+    --version)
+        show_version
+        ;;
+    cpu)
+        case "$2" in
+            getinfo)
+                get_cpu_info
+                ;;
+            *)
+                echo "Unknown CPU command: $2"
+                show_help
+                exit 1
+                ;;
+        esac
+        ;;
+    memory)
+        case "$2" in
+            getinfo)
+                get_memory_info
+                ;;
+            *)
+                echo "Unknown memory command: $2"
+                show_help
+                exit 1
+                ;;
+        esac
+        ;;
+    user)
+        case "$2" in
+            create)
+                create_user "$@"
+                ;;
+            list)
+                list_users "$@"
+                ;;
+            *)
+                echo "Unknown user command: $2"
+                show_help
+                exit 1
+                ;;
+        esac
+        ;;
+    file)
+        case "$2" in
+            getinfo)
+                get_file_info "$@"
+                ;;
+            *)
+                echo "Unknown file command: $2"
+                show_help
+                exit 1
+                ;;
+        esac
+        ;;
+    *)
+        echo "Unknown option: $1"
+        show_help
+        exit 1
+        ;;
+esac
+
